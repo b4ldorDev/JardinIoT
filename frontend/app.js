@@ -1,23 +1,37 @@
-// Configuración de la API - CAMBIA LA IP A LA DE TU RASPBERRY
-const API_URL = 'http://192.168.0.200:8000/api';
-const UPDATE_INTERVAL = 3000; // 3 segundos
+// ================================================================
+// CONFIGURACIÓN
+// CAMBIA ESTA IP A LA DE TU RASPBERRY PI
+// ================================================================
+const API_URL = 'http://TU_IP_RASPBERRY:8000/api';
+const UPDATE_INTERVAL = 3000; // Actualizar cada 3 segundos
 
+// ================================================================
+// VARIABLES GLOBALES
+// ================================================================
 let tempChart, humChart;
 
-// Colores verde terminal
-const greenColor = '#00ff00';
-const darkGreen = '#00aa00';
-const black = '#000000';
-const redColor = '#ff0000';
+// Colores del tema terminal
+const COLORS = {
+    green: '#00ff00',
+    darkGreen: '#00aa00',
+    black: '#000000',
+    red: '#ff0000'
+};
 
-// Configurar gráficos estilo terminal
-Chart.defaults.color = greenColor;
+// Colores para cada sensor en los gráficos
+const SENSOR_COLORS = ['#00ff00', '#00ffff', '#ffff00', '#ff00ff'];
+
+// ================================================================
+// CONFIGURACIÓN DE CHART.JS
+// ================================================================
+Chart.defaults.color = COLORS.green;
 Chart.defaults.borderColor = '#003300';
 
 const chartConfig = {
     type: 'line',
     options: {
         responsive: true,
+        maintainAspectRatio: true,
         interaction: {
             intersect: false,
             mode: 'index'
@@ -27,7 +41,7 @@ const chartConfig = {
                 display: true,
                 position: 'top',
                 labels: {
-                    color: greenColor,
+                    color: COLORS.green,
                     font: {
                         family: "'Press Start 2P', monospace",
                         size: 10
@@ -39,7 +53,7 @@ const chartConfig = {
         scales: {
             x: {
                 ticks: {
-                    color: darkGreen,
+                    color: COLORS.darkGreen,
                     font: {
                         family: "'Press Start 2P', monospace",
                         size: 8
@@ -54,7 +68,7 @@ const chartConfig = {
             y: {
                 beginAtZero: false,
                 ticks: {
-                    color: darkGreen,
+                    color: COLORS.darkGreen,
                     font: {
                         family: "'Press Start 2P', monospace",
                         size: 8
@@ -68,10 +82,9 @@ const chartConfig = {
     }
 };
 
-// Colores para cada sensor
-const sensorColors = ['#00ff00', '#00ffff', '#ffff00'];
-
-// Inicializar gráficos
+// ================================================================
+// INICIALIZACIÓN DE GRÁFICOS
+// ================================================================
 function initCharts() {
     const ctxTemp = document.getElementById('tempChart').getContext('2d');
     tempChart = new Chart(ctxTemp, {
@@ -92,7 +105,9 @@ function initCharts() {
     });
 }
 
-// Crear tarjeta de planta
+// ================================================================
+// TARJETAS DE PLANTAS
+// ================================================================
 function createPlantaCard(data) {
     const { sensor, planta, medicion } = data;
     
@@ -127,17 +142,16 @@ function createPlantaCard(data) {
             
             ${planta ? `
                 <div class="planta-rangos">
-                    <div class="rango-item">TEMP: ${planta.temp_min}°C - ${planta.temp_max}°C</div>
-                    <div class="rango-item">HUM: ${planta.humedad_min}% - ${planta.humedad_max}%</div>
+                    <div class="rango-item">🌡️ TEMP: ${planta.temp_min}°C - ${planta.temp_max}°C</div>
+                    <div class="rango-item">💧 HUM: ${planta.humedad_min}% - ${planta.humedad_max}%</div>
                 </div>
             ` : ''}
             
-            ${tieneAlerta ? '<div style="color: #ff0000; text-align: center; margin-top: 10px; font-size: 0.5em;">⚠️ FUERA DE RANGO</div>' : ''}
+            ${tieneAlerta ? '<div class="alerta-text">⚠️ FUERA DE RANGO</div>' : ''}
         </div>
     `;
 }
 
-// Actualizar tarjetas de plantas
 async function updatePlantas() {
     try {
         const response = await fetch(`${API_URL}/mediciones/ultimas`);
@@ -147,14 +161,16 @@ async function updatePlantas() {
         container.innerHTML = data.map(createPlantaCard).join('');
         
     } catch (error) {
-        console.error('Error al actualizar plantas:', error);
+        console.error('❌ Error al actualizar plantas:', error);
     }
 }
 
-// Actualizar gráficos
+// ================================================================
+// GRÁFICOS
+// ================================================================
 async function updateCharts() {
     try {
-        // Obtener datos de todos los sensores
+        // Obtener lista de sensores
         const sensoresRes = await fetch(`${API_URL}/sensores`);
         const sensores = await sensoresRes.json();
         
@@ -162,38 +178,49 @@ async function updateCharts() {
         const datasetsHum = [];
         let labels = [];
         
+        // Obtener datos de cada sensor
         for (let i = 0; i < sensores.length; i++) {
             const sensor = sensores[i];
             const medicionesRes = await fetch(`${API_URL}/mediciones/sensor/${sensor.id}?limit=30`);
+            
+            if (!medicionesRes.ok) continue;
+            
             const mediciones = await medicionesRes.json();
             
             if (mediciones.length > 0 && labels.length === 0) {
                 labels = mediciones.map(m => m.hora);
             }
             
+            const color = SENSOR_COLORS[i % SENSOR_COLORS.length];
+            
             datasetsTemp.push({
                 label: sensor.nombre,
                 data: mediciones.map(m => m.temperatura),
-                borderColor: sensorColors[i % sensorColors.length],
+                borderColor: color,
                 backgroundColor: 'transparent',
                 tension: 0.1,
                 borderWidth: 2,
                 pointRadius: 3,
-                pointBackgroundColor: sensorColors[i % sensorColors.length]
+                pointBackgroundColor: color,
+                pointBorderColor: COLORS.black,
+                pointBorderWidth: 1
             });
             
             datasetsHum.push({
                 label: sensor.nombre,
                 data: mediciones.map(m => m.humedad),
-                borderColor: sensorColors[i % sensorColors.length],
+                borderColor: color,
                 backgroundColor: 'transparent',
                 tension: 0.1,
                 borderWidth: 2,
                 pointRadius: 3,
-                pointBackgroundColor: sensorColors[i % sensorColors.length]
+                pointBackgroundColor: color,
+                pointBorderColor: COLORS.black,
+                pointBorderWidth: 1
             });
         }
         
+        // Actualizar gráficos
         tempChart.data.labels = labels;
         tempChart.data.datasets = datasetsTemp;
         tempChart.update('none');
@@ -203,11 +230,13 @@ async function updateCharts() {
         humChart.update('none');
         
     } catch (error) {
-        console.error('Error al actualizar gráficos:', error);
+        console.error('❌ Error al actualizar gráficos:', error);
     }
 }
 
-// Actualizar estadísticas generales
+// ================================================================
+// ESTADÍSTICAS GENERALES
+// ================================================================
 async function updateEstadisticas() {
     try {
         const response = await fetch(`${API_URL}/estadisticas`);
@@ -217,30 +246,39 @@ async function updateEstadisticas() {
         document.getElementById('totalPlantas').textContent = stats.plantas;
         document.getElementById('totalMediciones').textContent = stats.total_mediciones;
         
+        // Actualizar estado de conexión
         document.getElementById('statusText').textContent = 'CONNECTED';
-        document.getElementById('statusText').style.color = '#00ff00';
+        document.getElementById('statusText').style.color = COLORS.green;
         
     } catch (error) {
-        console.error('Error al actualizar estadísticas:', error);
+        console.error('❌ Error al actualizar estadísticas:', error);
         document.getElementById('statusText').textContent = 'ERROR';
-        document.getElementById('statusText').style.color = '#ff0000';
+        document.getElementById('statusText').style.color = COLORS.red;
     }
 }
 
-// Actualizar todo
+// ================================================================
+// ACTUALIZACIÓN COMPLETA
+// ================================================================
 async function updateAll() {
-    await updatePlantas();
-    await updateCharts();
-    await updateEstadisticas();
+    await Promise.all([
+        updatePlantas(),
+        updateCharts(),
+        updateEstadisticas()
+    ]);
 }
 
-// Inicializar
+// ================================================================
+// INICIALIZACIÓN
+// ================================================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Iniciando Jardín IoT Monitor...');
+    console.log(`📡 API URL: ${API_URL}`);
+    
     initCharts();
     updateAll();
     
-    // Actualizar cada 3 segundos
+    // Auto-actualización
     setInterval(updateAll, UPDATE_INTERVAL);
-    console.log('✓ Auto-actualización activada');
+    console.log(`✓ Auto-actualización cada ${UPDATE_INTERVAL/1000} segundos`);
 });

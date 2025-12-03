@@ -1,15 +1,21 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <DHT.h>
-// estos se cambian we
-const char* WIFI_SSID = "INFINITUMExcesosdeLENTITUD"; 
-const char* WIFI_PASSWORD = "123434";
-const char* MQTT_SERVER = "123.123.123.123";  // IP de tu Raspberry Pi
+
+// ================================================================
+// CONFIGURACIÓN - CAMBIA ESTOS VALORES
+// ================================================================
+const char* WIFI_SSID = "TU_RED_WIFI";           // Nombre de tu red WiFi
+const char* WIFI_PASSWORD = "TU_PASSWORD_WIFI";  // Contraseña de tu red WiFi
+const char* MQTT_SERVER = "TU_IP_RASPBERRY";     // IP de tu Raspberry Pi
 const int MQTT_PORT = 1883;
 
-const char* NOMBRE = "IleanaTapiaCastillo";  // Cambiar por tu nombre
-const char* MATRICULA = "A01773374";         // Cambiar por tu matrícula
+const char* NOMBRE = "TuNombre";      // Cambiar por tu nombre
+const char* MATRICULA = "TuMatricula"; // Cambiar por tu matrícula
 
+// ================================================================
+// CONFIGURACIÓN DEL SENSOR DHT11
+// ================================================================
 #define DHTPIN D3        // Pin donde está conectado el DHT11
 #define DHTTYPE DHT11    // Tipo de sensor
 DHT dht(DHTPIN, DHTTYPE);

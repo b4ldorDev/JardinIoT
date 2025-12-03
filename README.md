@@ -7,7 +7,7 @@ Sistema completo de monitoreo de plantas usando **ESP8266**, **DHT11**, **MQTT**
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
 
-##  Descripción
+## 📋 Descripción
 
 Este proyecto te permite monitorear en tiempo real la temperatura y humedad de tus plantas con:
 - Sensores **ESP8266 + DHT11**
@@ -15,9 +15,9 @@ Este proyecto te permite monitorear en tiempo real la temperatura y humedad de t
 - Base de datos **PostgreSQL**
 - API REST con **FastAPI**
 - Dashboard web **estilo terminal retro**
--  **Alertas automáticas** cuando las condiciones salen del rango óptimo
+- 🚨 **Alertas automáticas** cuando las condiciones salen del rango óptimo
 
-##  Arquitectura
+## 🏗️ Arquitectura
 
 ```
 ESP8266 (DHT11) ──MQTT──> Raspberry Pi
@@ -29,7 +29,7 @@ ESP8266 (DHT11) ──MQTT──> Raspberry Pi
                             └─ Frontend (HTML/CSS/JS)
 ```
 
-##  Estructura del Proyecto
+## 📁 Estructura del Proyecto
 
 ```
 jardin-iot/
@@ -47,50 +47,55 @@ jardin-iot/
 │   └── init_database.sql   # Script de inicialización
 ├── esp8266/
 │   └── esp8266_sensor.ino  # Código para ESP8266
+├── setup_ip.sh             # 🆕 Script de configuración de IP
 └── README.md
 ```
 
-## Instalación 
+## 🚀 Instalación Rápida (¡Funciona a la Primera!)
 
-### Requisitos Previos
-
-- **Raspberry Pi** con Raspbian/Raspberry Pi OS
-- **Python 3.8+**
-- **PostgreSQL 12+**
-- **Mosquitto MQTT Broker**
-- **ESP8266** con sensor **DHT11**
-
-### Clonar el Repositorio
+### 1. Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/jardin-iot.git
-cd jardin-iot
+git clone https://github.com/b4ldorDev/JardinIoT.git
+cd JardinIoT
 ```
 
-### Instalar PostgreSQL
+### 2. ⚡ Ejecutar Script de Configuración de IP
 
 ```bash
-sudo apt update
+chmod +x setup_ip.sh
+./setup_ip.sh
+```
+
+Este script te pedirá la IP de tu Raspberry Pi y configurará automáticamente todos los archivos necesarios.
+
+### 3. Requisitos Previos en Raspberry Pi
+
+```bash
+# Actualizar sistema
+sudo apt update && sudo apt upgrade -y
+
+# Instalar PostgreSQL
 sudo apt install postgresql postgresql-contrib -y
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
+
+# Instalar Mosquitto MQTT
+sudo apt install mosquitto mosquitto-clients -y
+sudo systemctl start mosquitto
+sudo systemctl enable mosquitto
+
+# Instalar Python y pip
+sudo apt install python3 python3-pip python3-venv -y
 ```
 
-### Crear Base de Datos
+### 4. Crear Base de Datos
 
 ```bash
 sudo -u postgres psql -f database/init_database.sql
 ```
 
-### Instalar Mosquitto
-
-```bash
-sudo apt install mosquitto mosquitto-clients -y
-sudo systemctl start mosquitto
-sudo systemctl enable mosquitto
-```
-
-###  Configurar Backend
+### 5. Configurar Backend
 
 ```bash
 cd backend
@@ -99,13 +104,15 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**IMPORTANTE:** Edita `database.py` y cambia el password de PostgreSQL:
+**⚠️ IMPORTANTE:** Edita `backend/database.py` y cambia el password de PostgreSQL:
 
 ```python
 DB_PASSWORD = os.getenv("DB_PASSWORD", "tu_password_aqui")
 ```
 
-** IMPORTANTE:** Edita `mqtt_listener.py` y configura los nombres de tus sensores:
+### 6. Configurar Nombres de Sensores
+
+Edita `backend/mqtt_listener.py` y configura el mapeo de sensores:
 
 ```python
 SENSOR_MAP = {
@@ -113,28 +120,20 @@ SENSOR_MAP = {
 }
 ```
 
-### Configurar Frontend
-
-Edita `frontend/app.js` línea 5:
-
-```javascript
-const API_URL = 'http://TU_IP_RASPBERRY:8000/api';
-```
-
-### Programar ESP8266
+### 7. Programar ESP8266
 
 1. Abre `esp8266/esp8266_sensor.ino` en Arduino IDE
-2. Modifica:
+2. Modifica las credenciales WiFi:
    ```cpp
    const char* WIFI_SSID = "tu_red_wifi";
    const char* WIFI_PASSWORD = "tu_password";
-   const char* MQTT_SERVER = "IP_DE_TU_RASPBERRY";
-   const char* NOMBRE = "TuNombre";
+   const char* NOMBRE = "TuNombre";      // Debe coincidir con SENSOR_MAP
    const char* MATRICULA = "TuMatricula";
    ```
-3. Sube el código al ESP8266
+3. La IP ya fue configurada por `setup_ip.sh`
+4. Sube el código al ESP8266
 
-##  Ejecutar el Sistema
+## ▶️ Ejecutar el Sistema
 
 ### Opción 1: Manual (para pruebas)
 
@@ -175,9 +174,9 @@ After=network.target postgresql.service mosquitto.service
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/jardin-iot/backend
-Environment="PATH=/home/pi/jardin-iot/backend/venv/bin"
-ExecStart=/home/pi/jardin-iot/backend/venv/bin/python mqtt_listener.py
+WorkingDirectory=/home/pi/JardinIoT/backend
+Environment="PATH=/home/pi/JardinIoT/backend/venv/bin"
+ExecStart=/home/pi/JardinIoT/backend/venv/bin/python mqtt_listener.py
 Restart=always
 
 [Install]
@@ -197,9 +196,9 @@ After=network.target postgresql.service
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/jardin-iot/backend
-Environment="PATH=/home/pi/jardin-iot/backend/venv/bin"
-ExecStart=/home/pi/jardin-iot/backend/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000
+WorkingDirectory=/home/pi/JardinIoT/backend
+Environment="PATH=/home/pi/JardinIoT/backend/venv/bin"
+ExecStart=/home/pi/JardinIoT/backend/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000
 Restart=always
 
 [Install]
@@ -219,7 +218,7 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/jardin-iot/frontend
+WorkingDirectory=/home/pi/JardinIoT/frontend
 ExecStart=/usr/bin/python3 -m http.server 3000
 Restart=always
 
@@ -235,7 +234,7 @@ sudo systemctl enable jardin-mqtt jardin-api jardin-frontend
 sudo systemctl start jardin-mqtt jardin-api jardin-frontend
 ```
 
-## Acceso al Sistema
+## 🌐 Acceso al Sistema
 
 - **Dashboard:** `http://TU_IP_RASPBERRY:3000`
 - **API Docs:** `http://TU_IP_RASPBERRY:8000/docs`
@@ -254,7 +253,7 @@ sudo systemctl start jardin-mqtt jardin-api jardin-frontend
 | GET | `/api/estadisticas` | Estadísticas generales |
 | GET | `/api/estadisticas/sensor/{id}` | Estadísticas por sensor |
 
-## Base de Datos
+## 🗄️ Base de Datos
 
 ### Tablas
 
@@ -279,7 +278,7 @@ id_medicion | id_sensor | hora                | temperatura | humedad
 1           | 1         | 2024-03-20 10:30:00 | 25.5        | 68.0
 ```
 
-## Comandos Útiles
+## 🛠️ Comandos Útiles
 
 ### Ver logs en tiempo real
 ```bash
@@ -323,7 +322,7 @@ mosquitto_sub -h localhost -t "garden/sensors/data"
 mosquitto_pub -h localhost -t "garden/sensors/data" -m "Test-A12345-25.5-68.0"
 ```
 
-##  Solución de Problemas
+## 🔧 Solución de Problemas
 
 ### No llegan datos
 
@@ -344,7 +343,7 @@ mosquitto_pub -h localhost -t "garden/sensors/data" -m "Test-A12345-25.5-68.0"
 
 ### Error de conexión a PostgreSQL
 
-Verifica el password en `database.py` y que PostgreSQL esté corriendo:
+Verifica el password en `backend/database.py` y que PostgreSQL esté corriendo:
 ```bash
 sudo systemctl status postgresql
 ```
@@ -358,9 +357,9 @@ sudo systemctl status postgresql
 
 2. Abre la consola del navegador (F12) y busca errores
 
-3. Verifica que la IP en `app.js` sea correcta
+3. Verifica que la IP esté correcta (ejecuta `./setup_ip.sh` de nuevo si es necesario)
 
-## Screenshots
+## 📸 Screenshots
 
 ### Dashboard Principal
 ![Dashboard](docs/dashboard.png)
@@ -371,7 +370,7 @@ sudo systemctl status postgresql
 ### API Documentation
 ![API Docs](docs/api-docs.png)
 
-## Contribuir
+## 🤝 Contribuir
 
 1. Fork el proyecto
 2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
@@ -385,9 +384,8 @@ Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más información.
 
 ## 👤 Autor
 
-
-- GitHub: [@b4ldorDev](https://github.com/b4ldirDev)
+- GitHub: [@b4ldorDev](https://github.com/b4ldorDev)
 
 ---
 
-** Hecho con Python, FastAPI y mucho ☕**
+**🌱 Hecho con Python, FastAPI y mucho ☕**
