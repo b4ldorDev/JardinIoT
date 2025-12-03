@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 import models
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuración MQTT
-MQTT_BROKER = "192.168.1.71"  
-MQTT_PORT = 1883
+# Configuración MQTT - CAMBIA ESTA IP
+MQTT_BROKER = os.getenv("MQTT_BROKER", "TU_IP_RASPBERRY")
+MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 MQTT_TOPIC = "garden/sensors/data"
 
 # MAPEO DE NOMBRES A IDs DE SENSORES
