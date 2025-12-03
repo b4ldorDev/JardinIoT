@@ -58,7 +58,7 @@ echo ""
 FRONTEND_FILE="$SCRIPT_DIR/frontend/app.js"
 if [ -f "$FRONTEND_FILE" ]; then
     # Reemplazar cualquier IP o placeholder con la nueva IP
-    sed -i "s|http://[0-9A-Za-z_.]*:8000/api|http://$RASPBERRY_IP:8000/api|g" "$FRONTEND_FILE"
+    sed -i "s|http://[0-9A-Za-z_.]\+:8000/api|http://$RASPBERRY_IP:8000/api|g" "$FRONTEND_FILE"
     echo "✅ frontend/app.js configurado"
 else
     echo "⚠️  frontend/app.js no encontrado"
@@ -70,7 +70,7 @@ fi
 MQTT_FILE="$SCRIPT_DIR/backend/mqtt_listener.py"
 if [ -f "$MQTT_FILE" ]; then
     # Reemplazar cualquier IP o placeholder en la variable MQTT_BROKER
-    sed -i "s|MQTT_BROKER = os.getenv(\"MQTT_BROKER\", \"[0-9A-Za-z_.]*\")|MQTT_BROKER = os.getenv(\"MQTT_BROKER\", \"$RASPBERRY_IP\")|g" "$MQTT_FILE"
+    sed -i "s|MQTT_BROKER = os.getenv(\"MQTT_BROKER\", \"[0-9A-Za-z_.]\+\")|MQTT_BROKER = os.getenv(\"MQTT_BROKER\", \"$RASPBERRY_IP\")|g" "$MQTT_FILE"
     echo "✅ backend/mqtt_listener.py configurado"
 else
     echo "⚠️  backend/mqtt_listener.py no encontrado"
@@ -82,7 +82,7 @@ fi
 ESP_FILE="$SCRIPT_DIR/esp8266/esp8266_sensor.ino"
 if [ -f "$ESP_FILE" ]; then
     # Reemplazar cualquier IP o placeholder en MQTT_SERVER
-    sed -i "s|MQTT_SERVER = \"[0-9A-Za-z_.]*\"|MQTT_SERVER = \"$RASPBERRY_IP\"|g" "$ESP_FILE"
+    sed -i "s|MQTT_SERVER = \"[0-9A-Za-z_.]\+\"|MQTT_SERVER = \"$RASPBERRY_IP\"|g" "$ESP_FILE"
     echo "✅ esp8266/esp8266_sensor.ino configurado"
 else
     echo "⚠️  esp8266/esp8266_sensor.ino no encontrado"
