@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
-from typing import List, Optional
+from fastapi import FastAPI, Depends, HTTPException # Crear  la aplicación , Depends importa dependencias para libreria  en esta nos importa s la conexión con la db   
+from fastapi.middleware.cors import CORSMiddleware   # Permite peticiones de otros dominios 
+from sqlalchemy.orm import Session   # nos permite crear una sesion para manejar la db 
+from sqlalchemy import desc, func  # nos permite usar funciones sql  ORDER BY DESC, COUNT
+from typing import List, Optional # 
 from datetime import datetime
-import models
-from database import get_db
+import models  # Para los modelos de la base de datos 
+from database import get_db  #obtener la conexion a la db 
 
 # ================================================================
 # CONFIGURACIÓN DE FASTAPI
@@ -13,7 +13,7 @@ from database import get_db
 app = FastAPI(
     title="Jardín IoT API",
     description="Sistema de monitoreo de plantas con ESP8266 y DHT11",
-    version="2.0.0"
+    version="1.0.0"
 )
 
 # CORS - Permitir peticiones desde el frontend
