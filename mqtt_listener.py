@@ -1,4 +1,3 @@
-contents:
 import paho.mqtt.client as mqtt
 from sqlalchemy.orm import Session
 from database import SessionLocal
