@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARDÍN IoT - MONITOR v2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        
+        <div class="header">
+            <div class="scan-line"></div>
+            <h1>█ JARDÍN IoT v2.0 █</h1>
+            <div class="subtitle">&gt; SISTEMA DE MONITOREO DE PLANTAS</div>
+            <div class="terminal-line">&gt; SYSTEM ONLINE <span class="blink">█</span></div>
+        </div>
+        
+        <!-- Estadísticas Generales -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">▼ SENSORES ACTIVOS</div>
+                <div class="stat-value" id="sensoresActivos">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">▼ PLANTAS</div>
+                <div class="stat-value" id="totalPlantas">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">▼ MEDICIONES</div>
+                <div class="stat-value" id="totalMediciones">0</div>
+            </div>
+        </div>
+
+        <!-- Tarjetas de Plantas -->
+        <div id="plantasContainer" class="plantas-grid"></div>
+        
+        <!-- Gráficos -->
+        <div class="chart-container">
+            <div class="chart-title">█ TEMPERATURA POR SENSOR █</div>
+            <canvas id="tempChart"></canvas>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">█ HUMEDAD POR SENSOR █</div>
+            <canvas id="humChart"></canvas>
+        </div>
+        
+        <div class="terminal-line" style="text-align: center;">
+            &gt; STATUS: <span id="statusText">CONNECTED</span> <span class="blink">█</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
