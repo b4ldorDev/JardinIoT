@@ -3,188 +3,112 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 import models
 import logging
-from datetime import datetime
-import math
 
-logging.basicConfig(
-    level=logging.DEBUG,  # DEBUG por ahora para diagnóstico; cámbialo a INFO cuando esté resuelto
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# CONFIGURACIÓN MQTT
-BROKER = "192.168.0.71"
-PORT = 1883
-TOPIC = "garden/sensors/data"
+# Configuración MQTT
+MQTT_BROKER = "localhost"  # Tu Raspberry Pi
+MQTT_PORT = 1883
+MQTT_TOPIC = "garden/sensors/data"
 
-def validar_datos(temp: float, hum: float) -> bool:
-    """Valida que los datos estén en rangos razonables"""
-    if not (isinstance(temp, (int, float)) and math.isfinite(temp)):
-        logger.error("Temperatura no es un número finito: %r", temp)
-        return False
+# MAPEO DE NOMBRES A IDs DE SENSORES
+# Cambia esto según tus datos en la tabla sensores
+SENSOR_MAP = {
+    "IleanaTapiaCastillo": 1,  # Sensor 1
+    "OtroNombre1": 2,            # Sensor 2
+    "OtroNombre2": 3             # Sensor 3
+}
 
-    if not (isinstance(hum, (int, float)) and math.isfinite(hum)):
-        logger.error("Humedad no es un número finito: %r", hum)
-        return False
-
-    if not (-50 <= temp <= 100):
-        logger.error("Temperatura fuera de rango: %s", temp)
-        return False
-
-    if not (0 <= hum <= 100):
-        logger.error("Humedad fuera de rango: %s", hum)
-        return False
-
-    return True
-
-def get_or_create_sensor(db: Session, nombre: str):
-    """Busca un sensor por nombre; si no existe lo crea y devuelve la instancia"""
-    try:
-        sensor = db.query(models.Sensor).filter(models.Sensor.nombre == nombre).first()
-        if sensor:
-            logger.debug("Sensor encontrado en DB: %s (id=%s)", nombre, getattr(sensor, "id", getattr(sensor, "id_sensor", None)))
-            return sensor
-
-        sensor = models.Sensor(nombre=nombre)
-        db.add(sensor)
-        db.commit()
-        db.refresh(sensor)
-        logger.info("Sensor creado: %s (id=%s)", nombre, getattr(sensor, "id", getattr(sensor, "id_sensor", None)))
-        return sensor
-    except Exception:
-        logger.exception("Error al obtener/crear sensor '%s'", nombre)
-        try:
-            db.rollback()
-        except Exception:
-            logger.exception("Error al hacer rollback")
-        return None
-
-def guardar_medicion(db: Session, id_sensor: int, temp: float, hum: float):
-    """Guarda una medición en PostgreSQL usando la sesión pasada"""
+def save_medicion(id_sensor: int, temp: float, hum: float):
+    """Guarda una medición en PostgreSQL"""
+    db = SessionLocal()
     try:
         medicion = models.Medicion(
             id_sensor=id_sensor,
             temperatura=temp,
-            humedad=hum,
-            hora=datetime.now()
+            humedad=hum
         )
         db.add(medicion)
         db.commit()
-        logger.info("Medición guardada en DB: sensor_id=%s temp=%s hum=%s", id_sensor, temp, hum)
-
-        # Obtener datos relacionados para logs/alertas
-        try:
-            sensor = db.query(models.Sensor).filter(
-                (getattr(models.Sensor, "id_sensor", None) == id_sensor) if hasattr(models.Sensor, "id_sensor") else False
-            ).first()
-        except Exception:
-            # Fallback: buscar por la columna primaria 'id'
-            sensor = db.query(models.Sensor).filter(models.Sensor.id == id_sensor).first()
-
+        
+        # Obtener info del sensor y planta
+        sensor = db.query(models.Sensor).filter(models.Sensor.id_sensor == id_sensor).first()
         planta = db.query(models.Planta).filter(models.Planta.id_sensor == id_sensor).first()
-
-        sensor_nombre = sensor.nombre if sensor else f"sensor_{id_sensor}"
-        planta_nombre = planta.nombre if planta else None
-
-        # Verificar alertas si existe planta
+        
+        sensor_nombre = sensor.nombre if sensor else f"Sensor {id_sensor}"
+        planta_nombre = planta.nombre if planta else "Sin planta"
+        
+        logger.info(f"✓ Guardado: {sensor_nombre} ({planta_nombre}) - {temp}°C, {hum}%")
+        
+        # Verificar alertas
         if planta:
-            try:
-                if planta.temp_min is not None and (temp < float(planta.temp_min) or temp > float(planta.temp_max)):
-                    logger.warning("Temperatura fuera de rango para %s: %s (min=%s max=%s)", planta.nombre, temp, planta.temp_min, planta.temp_max)
-                if planta.humedad_min is not None and (hum < float(planta.humedad_min) or hum > float(planta.humedad_max)):
-                    logger.warning("Humedad fuera de rango para %s: %s (min=%s max=%s)", planta.nombre, hum, planta.humedad_min, planta.humedad_max)
-            except Exception:
-                logger.exception("Error al verificar rangos de planta (posibles valores inválidos en DB)")
-    except Exception:
-        logger.exception("Error al guardar medición (rollback)")
-        try:
-            db.rollback()
-        except Exception:
-            logger.exception("Error al hacer rollback después del fallo al guardar medición")
+            if temp < float(planta.temp_min) or temp > float(planta.temp_max):
+                logger.warning(f"⚠️  ALERTA TEMPERATURA: {planta_nombre} fuera de rango!")
+            if hum < float(planta.humedad_min) or hum > float(planta.humedad_max):
+                logger.warning(f"⚠️  ALERTA HUMEDAD: {planta_nombre} fuera de rango!")
+                
+    except Exception as e:
+        logger.error(f"Error guardando: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 def on_connect(client, userdata, flags, rc):
     """Callback cuando se conecta al broker MQTT"""
     if rc == 0:
-        logger.info("Conectado al broker MQTT %s:%s, suscribiendo al topic %s", BROKER, PORT, TOPIC)
-        client.subscribe(TOPIC)
+        logger.info("✓ Conectado a MQTT Broker")
+        client.subscribe(MQTT_TOPIC)
+        logger.info(f"✓ Suscrito a: {MQTT_TOPIC}")
     else:
-        logger.error("Fallo conexión MQTT, rc=%s", rc)
+        logger.error(f"✗ Error de conexión: {rc}")
 
 def on_message(client, userdata, msg):
     """Callback cuando llega un mensaje MQTT"""
     try:
-        logger.debug("Mensaje recibido (bytes): %r", msg.payload)
-        mensaje = msg.payload.decode('utf-8', errors='replace').strip()
-        logger.info("Mensaje recibido en topic %s: %s", msg.topic, mensaje)
-
-        # Formato esperado: Nombre-Matricula-Temperatura-Humedad
-        datos = mensaje.split('-')
-        if len(datos) != 4:
-            # intentar separadores alternativos comunes
-            for sep in [';', ',', ' ']:
-                if len(mensaje.split(sep)) == 4:
-                    datos = mensaje.split(sep)
-                    logger.debug("Usando separador alternativo '%s'", sep)
-                    break
-
-        if len(datos) != 4:
-            logger.error("Formato inválido, se esperaba 4 campos, llegaron %d: %s", len(datos), mensaje)
-            return
-
-        nombre = datos[0].strip()
-        matricula = datos[1].strip()
-        if matricula == "":
-            logger.error("Matricula vacía en mensaje: %s", mensaje)
-            return
-
-        # Aceptar coma decimal transformándola a punto
-        temp_str = datos[2].strip().replace(',', '.')
-        hum_str = datos[3].strip().replace(',', '.')
-
-        try:
-            temperatura = float(temp_str)
-            humedad = float(hum_str)
-        except ValueError:
-            logger.exception("No se pudieron convertir temperatura/humedad a float: '%s' / '%s'", temp_str, hum_str)
-            return
-
-        if not validar_datos(temperatura, humedad):
-            logger.debug("Datos rechazados por validación: temp=%s hum=%s", temperatura, humedad)
-            return
-
-        db = SessionLocal()
-        try:
-            sensor = get_or_create_sensor(db, nombre)
-            if not sensor:
-                logger.error("No se pudo obtener o crear el sensor '%s'", nombre)
-                return
-
-            id_sensor = getattr(sensor, "id_sensor", None) or getattr(sensor, "id", None)
-            if not id_sensor:
-                logger.error("El objeto sensor no tiene atributo 'id' ni 'id_sensor': %r", sensor)
-                return
-
-            guardar_medicion(db, id_sensor, temperatura, humedad)
-        finally:
-            db.close()
-
-    except Exception:
-        logger.exception("Error inesperado procesando mensaje MQTT")
+        # Formato: "IleanaTapiaCastillo-A01773374-25.50-60.30"
+        payload = msg.payload.decode('utf-8')
+        logger.info(f"📨 Mensaje recibido: {payload}")
+        
+        parts = payload.split('-')
+        if len(parts) == 4:
+            nombre = parts[0]
+            matricula = parts[1]
+            temp = float(parts[2])
+            hum = float(parts[3])
+            
+            # Mapear nombre a ID de sensor
+            id_sensor = SENSOR_MAP.get(nombre)
+            
+            if id_sensor:
+                save_medicion(id_sensor, temp, hum)
+            else:
+                logger.warning(f"⚠️  Sensor no reconocido: {nombre}")
+                logger.info(f"💡 Sensores válidos: {list(SENSOR_MAP.keys())}")
+        else:
+            logger.warning(f"Formato inválido: {payload}")
+            
+    except Exception as e:
+        logger.error(f"Error procesando mensaje: {e}")
 
 def main():
+    """Inicia el listener MQTT"""
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-
+    
+    logger.info("🚀 Iniciando MQTT Listener para Jardín IoT...")
+    logger.info(f"📡 Conectando a {MQTT_BROKER}:{MQTT_PORT}")
+    logger.info(f"🌱 Sensores configurados: {list(SENSOR_MAP.keys())}")
+    
     try:
-        client.connect(BROKER, PORT, 60)
+        client.connect(MQTT_BROKER, MQTT_PORT, 60)
         client.loop_forever()
     except KeyboardInterrupt:
+        logger.info("\n👋 Deteniendo listener...")
         client.disconnect()
-        logger.info("Desconectado por KeyboardInterrupt")
-    except Exception:
-        logger.exception("Error en el loop principal MQTT")
+    except Exception as e:
+        logger.error(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
