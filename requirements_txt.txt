@@ -1,0 +1,17 @@
+# ================================================================
+# JARDÍN IoT - DEPENDENCIAS PYTHON
+# ================================================================
+
+# Framework web
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Base de datos
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# MQTT
+paho-mqtt==1.6.1
+
+# Utilidades
+python-dotenv==1.0.0
